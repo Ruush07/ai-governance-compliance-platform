@@ -5,11 +5,14 @@ evidence extraction, requirement mapping, deterministic scoring, gap analysis,
 recommendations and audit reporting — while keeping a **human responsible for
 every final compliance decision**. It assists auditors; it never replaces them.
 
-> **Status: Phase 1 (Foundation) complete.** Backend foundation, data model,
-> configuration-driven framework engine, secure upload API, deterministic
-> scoring engine, and audit trail are implemented and tested. Ingestion, RAG,
-> LLM assessment, reports and the frontend are delivered in later phases (see
-> [docs/PHASES.md](docs/PHASES.md)).
+> **Status: Phases 1–8 complete.** Full pipeline is implemented and tested
+> (backend: 97 tests; frontend: green production build). Upload → ingest (OCR) →
+> RAG retrieval → LLM assessment (with hallucination guard) → deterministic
+> scoring → recommendations → PDF/JSON reports → dashboard, plus RBAC, a
+> human-override loop, and Docker deployment. Everything runs **offline and
+> deterministically by default** (mock LLM + hashing embedder); real
+> Claude/ChromaDB/sentence-transformers are config-flip upgrades. See
+> [docs/PHASES.md](docs/PHASES.md).
 
 ---
 
@@ -61,7 +64,26 @@ curl http://127.0.0.1:8000/api/frameworks
 Run the test suite:
 
 ```bash
-cd backend && ./.venv/bin/python -m pytest      # 60 tests
+cd backend && ./.venv/bin/python -m pytest      # 97 tests
+```
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev      # http://localhost:5173, proxies /api to the backend on :8000
+# or: npm run build   -> static bundle in frontend/dist
+```
+
+Pages: Dashboard, Upload, History (+ new-assessment flow), Assessment detail
+(evidence + recommendations + report generation + reprocess/override),
+Framework Explorer, Reports, Settings. See [frontend/README.md](frontend/README.md).
+
+### Docker (backend + PostgreSQL)
+
+```bash
+docker compose up --build   # see docs/DEPLOYMENT.md
 ```
 
 ---
@@ -94,13 +116,18 @@ Error: `{"success": false, "error": {"code", "message", "details"}}`
 | `POST /api/upload` | Upload document(s) (validated) | ✅ |
 | `GET  /api/frameworks` | List frameworks | ✅ |
 | `GET  /api/framework/{id}` | Framework + grouped requirements | ✅ |
-| `POST /api/process` | Create an assessment | ✅ (creates `PENDING`; pipeline runs later phases) |
-| `POST /api/reprocess` | Reset an assessment | ✅ |
-| `GET  /api/assessment/{id}` | Full assessment | ✅ |
+| `POST /api/process` | Create + run an assessment (ingest→…→recommend) | ✅ runs full pipeline |
+| `POST /api/reprocess` | Reset + re-run an assessment | ✅ |
+| `GET  /api/assessment/{id}` | Full assessment (scores, evidence, recs) | ✅ |
 | `GET  /api/history` | Assessment history | ✅ |
 | `GET  /api/dashboard` | KPIs + analytics | ✅ |
-| `GET  /api/report/{id}` | Report record | ✅ (rendering: Phase 5) |
+| `POST /api/report` | Generate a PDF/JSON report | ✅ |
+| `GET  /api/report/{id}` · `/download` | Report record + file download | ✅ |
+| `POST /api/score/{id}/override` | Human override of a verdict (re-scores) | ✅ |
 | `GET  /api/documents`, `/api/audit-logs`, `/api/auth/*` | Supporting endpoints | ✅ |
+
+Write/override endpoints are role-gated when `ENFORCE_RBAC=true` (prod default);
+open in dev for easy demoing.
 
 ---
 
@@ -121,9 +148,13 @@ backend/
   recommendations/   Recommendation (deterministic ranking)
   reports/           GeneratedReport + JSON assembly
   dashboard/         KPI analytics
-  ingestion/ rag/    Document parsing + retrieval  (interfaces now, impl Phase 2)
-  prompts/           Versioned auditor prompt library (implemented)
+  ingestion/         Document parsing + OCR (PyMuPDF/pdfplumber/pytesseract)
+  rag/               Chunking, embeddings, vector index, retrieval
+  llm/               Provider-agnostic LLM client + hallucination validation
+  prompts/           Versioned auditor prompt library
   api/               Public URL surface + health/root
+frontend/            React + TS + Tailwind + Recharts SPA (Vite)
+docker-compose.yml   PostgreSQL + backend
 ```
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for design decisions and

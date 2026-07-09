@@ -1,52 +1,54 @@
 # Delivery roadmap
 
-The platform is built in phases. Each phase is independently valuable, extends
-(never rewrites) prior work, and keeps the REST API backward-compatible.
+The platform was built in phases; each extends (never rewrites) prior work and
+keeps the REST API backward-compatible. **All phases below are complete.**
 
-### ✅ Phase 1 — Foundation (this delivery)
+### ✅ Phase 1 — Foundation
+Django 5 + DRF; split settings; 11 core models; config-driven framework engine
+(strict JSON Schema, loader, deterministic `config_hash`, `sync_frameworks`);
+5 seed control libraries (122 requirements); secure upload API; deterministic
+scoring engine; append-only audit trail; dashboard KPIs; auditor prompt library.
 
-- Django 5 + DRF project; split settings (base/dev/prod/test); env-driven config.
-- All 11 core data models + migrations; custom user model.
-- Configuration-driven framework engine: strict JSON Schema, JSON/YAML loader,
-  deterministic `config_hash`, idempotent `sync_frameworks` command.
-- 5 seed control libraries (122 requirements), adversarially fact-checked.
-- Secure multi-document upload API (extension + size + magic-byte validation).
-- Deterministic scoring engine (pure Python) + persistence service — tested for
-  100% reproducibility.
-- Append-only audit trail + request-correlation middleware.
-- Dashboard KPI analytics endpoint.
-- Versioned auditor prompt library.
-- Full REST surface (all 9 spec routes + supporting endpoints); 60 tests.
+### ✅ Phase 2 — Ingestion
+`ingestion/`: PyMuPDF + pdfplumber text/table extraction, python-docx, pytesseract
+OCR fallback with scanned-page detection; `extracted_text` + reversible
+`page_map` (char-offset → page) for page-cited evidence.
 
-### Phase 2 — Ingestion & RAG
+### ✅ Phase 3 — RAG
+`rag/`: recursive + page chunkers; deterministic dependency-free hashing embedder
+(default) with optional sentence-transformers; DB-backed vector index (default,
+deterministic cosine) with optional ChromaDB; framework-scoped retriever.
 
-- `ingestion/`: PyMuPDF/pdfplumber text extraction, pytesseract OCR fallback,
-  table/scanned-page detection, metadata + XREF, DOCX support.
-- `rag/`: recursive + page chunking, embeddings (Sentence Transformers /
-  nomic-embed-text), ChromaDB vector store, framework-scoped retrieval.
-- Wire `POST /api/process` to run ingestion + indexing; populate `DocumentChunk`.
+### ✅ Phase 4 — LLM assessment + hallucination prevention
+`llm/`: provider-agnostic client — deterministic offline **mock** (default),
+Anthropic **Claude** adapter (auto-selected when `ANTHROPIC_API_KEY` set),
+OpenAI/Ollama adapters. Strict-JSON schema validation, retry, safe fallback,
+verbatim quote verification, confidence threshold, human-review flag. Populates
+`Evidence` + requirement-level `AssessmentScore`.
 
-### Phase 3 — LLM assessment & hallucination prevention
+### ✅ Phase 5 — Runtime pipeline (scoring, risk, recommendations)
+`assessments/pipeline.run_assessment` orchestrates ingest → index → per-requirement
+assessment → deterministic scoring → recommendation generation (weight+status
+priority, stable ranking, full traceability). `POST /api/process` runs it.
 
-- Provider-agnostic LLM client (Claude/GPT/Gemini/Qwen/Ollama), temperature 0.
-- Per-requirement assessment using the auditor prompts → strict JSON verdicts.
-- Hallucination prevention: quote verifier, page verifier, JSON-schema
-  validator, confidence threshold, retry logic, deterministic caching, human
-  review queue. Populate `Evidence` + requirement-level `AssessmentScore`.
+### ✅ Phase 6 — Reports
+ReportLab PDF (exec summary, control scores, gaps, prioritised recommendations)
++ JSON export, content-checksummed; `POST /api/report`, `GET /api/report/{id}`,
+`/download`.
 
-### Phase 4 — Scoring, risk & recommendations at runtime
+### ✅ Phase 7 — Frontend
+React + TypeScript + Tailwind + Recharts SPA (`frontend/`): Dashboard, Upload,
+History (+ new-assessment flow), Assessment detail (evidence + recommendations +
+report generation + reprocess/override), Framework Explorer, Reports, Settings.
+Typed API client over the response envelope; Vite dev proxy to the backend.
 
-- Invoke `scoring.services.score_and_persist` after verdicts land.
-- Risk engine refinement; recommendation generation from gaps with deterministic
-  ranking and full traceability.
+### ✅ Phase 8 — Auth/RBAC, hardening, deployment
+Role hierarchy + `HasMinimumRole` gating write/override endpoints (toggled by
+`ENFORCE_RBAC`); human-override endpoint that re-scores deterministically and
+audits; DRF throttling; Dockerfile + docker-compose (PostgreSQL) + entrypoint;
+`docs/DEPLOYMENT.md`.
 
-### Phase 5 — Reports
-
-- ReportLab PDF (executive summary, framework scores, evidence, missing
-  controls, risk, recommendations, appendix) + JSON export; wire `report/{id}`.
-
-### Phase 6 — Frontend, auth & hardening
-
-- React + TypeScript + Tailwind + Recharts (Dashboard, Upload, Assessment,
-  Framework Explorer, Reports, History, Settings).
-- RBAC enforcement, human-override workflow, rate limiting, deployment.
+## Possible future work
+- Move `POST /api/process` onto a task queue (Celery/RQ) for real-LLM scale.
+- Browser E2E tests (Playwright) for the frontend.
+- Deterministic response caching for real LLM providers.

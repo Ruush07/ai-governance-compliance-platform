@@ -1,12 +1,12 @@
-"""Image / OCR extraction interfaces (implementation: Phase 2).
+"""Image / OCR extraction (Phase 2 implementation).
 
-Handles scanned pages and embedded images: OCR fallback via pytesseract, image
-extraction from PDFs, and scanned-page detection. Concrete code + heavy imports
-(Pillow, pytesseract, fitz) arrive in Phase 2.
+pytesseract-backed OCR for scanned pages and image documents. Requires the
+``tesseract`` binary on PATH; all imports are lazy so environments without OCR
+still boot and run the non-OCR pipeline.
 """
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
+import io
 from dataclasses import dataclass
 
 
@@ -17,19 +17,29 @@ class OcrResult:
     confidence: float | None = None
 
 
-class ImageExtractor(ABC):
-    @abstractmethod
-    def ocr_page(self, image_bytes: bytes, page_number: int) -> OcrResult:  # pragma: no cover
-        ...
+def ocr_image_bytes(image_bytes: bytes) -> str:
+    """OCR raw image bytes → text. Returns '' on any failure (best-effort)."""
+    try:
+        import pytesseract
+        from PIL import Image
+
+        with Image.open(io.BytesIO(image_bytes)) as img:
+            return pytesseract.image_to_string(img).strip()
+    except Exception:  # pragma: no cover - OCR unavailable / undecodable image
+        return ""
+
+
+def ocr_image_file(file_path: str) -> str:
+    try:
+        import pytesseract
+        from PIL import Image
+
+        with Image.open(file_path) as img:
+            return pytesseract.image_to_string(img).strip()
+    except Exception:  # pragma: no cover
+        return ""
 
 
 def ocr_document(file_path: str) -> list[OcrResult]:
-    """OCR every scanned page of a document.
-
-    TODO(phase-2): implement pytesseract-based OCR with scanned-page detection
-    and per-page confidence, used as a fallback when native text extraction
-    yields little/no text.
-    """
-    raise NotImplementedError(
-        "TODO(phase-2): OCR is implemented in the ingestion phase."
-    )
+    """OCR an image document as a single page."""
+    return [OcrResult(page_number=1, text=ocr_image_file(file_path))]

@@ -39,6 +39,10 @@ class UploadedDocument(BaseModel):
     # Populated during ingestion (Phase 2).
     page_count = models.PositiveIntegerField(null=True, blank=True)
     is_scanned = models.BooleanField(null=True, blank=True)
+    # Full extracted text + a map of global char-offset ranges to page numbers,
+    # so evidence quotes can always be resolved back to a page (Rule 2).
+    extracted_text = models.TextField(blank=True, default="")
+    page_map = models.JSONField(default=list, blank=True)
 
     uploaded_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,

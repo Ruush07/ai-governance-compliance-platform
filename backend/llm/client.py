@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 class LLMClient:
     def __init__(self, provider: LLMProvider | None = None):
         self.provider = provider or get_provider()
+        print("USING PROVIDER:", self.provider.name)
         self.max_retries = settings.LLM["MAX_RETRIES"]
 
     @property

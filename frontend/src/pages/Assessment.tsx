@@ -162,7 +162,7 @@ export default function Assessment() {
               Summary
             </h3>
             <p className="text-sm leading-relaxed text-slate-600">
-              {data.summary}
+              {JSON.stringify(data.summary, null, 2)}
             </p>
           </div>
         )}

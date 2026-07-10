@@ -17,6 +17,7 @@ from .serializers import (
     ReprocessSerializer,
 )
 from .services import create_assessment, reprocess_assessment
+print("ASSESSMENTS VIEW LOADED")
 
 _DETAIL_PREFETCH = (
     "documents",

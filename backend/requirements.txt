@@ -1,9 +1,0 @@
-# Convenience entrypoint. For a full development environment run:
-#     pip install -r requirements/dev.txt
-# Optional subsystems (install as phases are enabled):
-#     pip install -r requirements/ingestion.txt
-#     pip install -r requirements/rag.txt
-#     pip install -r requirements/reports.txt
-# Production:
-#     pip install -r requirements/prod.txt
--r requirements/base.txt

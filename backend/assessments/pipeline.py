@@ -42,6 +42,7 @@ def _prepare_documents(assessment) -> None:
 def run_assessment(assessment, *, client: LLMClient | None = None, retriever: Retriever | None = None):
     """Execute the assessment pipeline. Returns the updated assessment."""
     client = client or LLMClient()
+    print("PROVIDER:", client.provider_name)
     retriever = retriever or Retriever()
 
     assessment.status = AssessmentStatus.PROCESSING
